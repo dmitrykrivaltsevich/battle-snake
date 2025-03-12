@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 
 # Initialize Pygame
 pygame.init()
@@ -15,6 +16,7 @@ white = (255, 255, 255)
 red = (255, 0, 0)
 green = (0, 255, 0)
 gray = (128, 128, 128)  # For obstacles
+orange = (255, 165, 0)  # For hunter snake
 
 # Snake properties
 snake_block_size = 10
@@ -28,6 +30,87 @@ def is_collision_with_obstacles(x, y, obstacles):
             return True
     return False
 
+# Function to calculate distance between two points
+def calculate_distance(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+# Function to find best direction for hunter snake to avoid obstacles and reach target
+def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_direction, snake_body):
+    # Possible directions
+    directions = [
+        {"dx": -snake_block_size, "dy": 0, "name": "LEFT"},
+        {"dx": snake_block_size, "dy": 0, "name": "RIGHT"},
+        {"dx": 0, "dy": -snake_block_size, "name": "UP"},
+        {"dx": 0, "dy": snake_block_size, "name": "DOWN"}
+    ]
+    
+    # Filter out directions that would cause collision with obstacles
+    valid_directions = []
+    for direction in directions:
+        new_x = head_x + direction["dx"]
+        new_y = head_y + direction["dy"]
+        
+        # Check for teleportation at screen edges
+        if new_x >= width:
+            new_x = 0
+        elif new_x < 0:
+            new_x = width - snake_block_size
+        if new_y >= height:
+            new_y = 0
+        elif new_y < 0:
+            new_y = height - snake_block_size
+        
+        # Check for obstacle collision
+        collision_with_obstacle = is_collision_with_obstacles(new_x, new_y, obstacles)
+        
+        # Check for self collision
+        collision_with_self = False
+        if len(snake_body) > 1:  # Only check if snake has more than one segment
+            for i in range(len(snake_body) - 1):  # Skip checking against head
+                segment = snake_body[i]
+                if new_x == segment[0] and new_y == segment[1]:
+                    collision_with_self = True
+                    break
+                
+        if not (collision_with_obstacle or collision_with_self):
+            # Calculate distance to target
+            distance = calculate_distance(new_x, new_y, target_x, target_y)
+            
+            # Calculate if this is a reversal (going back the way we came)
+            is_reversal = False
+            if current_direction["dx"] == -direction["dx"] and current_direction["dx"] != 0:
+                is_reversal = True
+            if current_direction["dy"] == -direction["dy"] and current_direction["dy"] != 0:
+                is_reversal = True
+                
+            # Add slight penalty for changing direction to make movement smoother
+            direction_change_penalty = 0
+            if current_direction["dx"] != direction["dx"] or current_direction["dy"] != direction["dy"]:
+                # If it's not continuing in same direction, add a small penalty
+                direction_change_penalty = 10
+                
+            # Add large penalty for reversals to avoid back-and-forth movement
+            if is_reversal:
+                direction_change_penalty = 50
+                
+            valid_directions.append({
+                "dx": direction["dx"],
+                "dy": direction["dy"],
+                "name": direction["name"],
+                "distance": distance + direction_change_penalty
+            })
+    
+    # If no valid directions, return current direction
+    if not valid_directions:
+        return current_direction["dx"], current_direction["dy"]
+    
+    # Sort by distance to target (including penalties)
+    valid_directions.sort(key=lambda x: x["distance"])
+    
+    # Return best direction
+    best_direction = valid_directions[0]
+    return best_direction["dx"], best_direction["dy"]
+
 # Font for score and game over messages - using monospace for NES-style look
 font_style = pygame.font.SysFont("monospace", 28, bold=True)
 score_font = pygame.font.SysFont("monospace", 20, bold=True)
@@ -39,11 +122,17 @@ def show_score(score, is_reversal=False):
     screen.blit(value, [width - 100, 10])  # Top right corner
 
 
-def draw_snake(snake_block_size, snake_list):
-    # NES-style snake colors - darker green for body, lighter green for head
-    snake_body_color = (0, 180, 0)  # Darker green
-    snake_head_color = (50, 255, 50)  # Lighter green
-    snake_outline_color = (0, 100, 0)  # Very dark green for outlines
+def draw_snake(snake_block_size, snake_list, is_hunter=False):
+    if is_hunter:
+        # Hunter snake colors - darker orange for body, lighter orange for head
+        snake_body_color = (200, 100, 0)  # Darker orange
+        snake_head_color = (255, 165, 0)  # Lighter orange
+        snake_outline_color = (150, 75, 0)  # Very dark orange for outlines
+    else:
+        # NES-style snake colors - darker green for body, lighter green for head
+        snake_body_color = (0, 180, 0)  # Darker green
+        snake_head_color = (50, 255, 50)  # Lighter green
+        snake_outline_color = (0, 100, 0)  # Very dark green for outlines
     
     for i, segment in enumerate(snake_list):
         # Draw main body segment
@@ -195,8 +284,9 @@ def show_title_screen():
         "Q: Quit Game",
         "R: Restart Game",
         "",
-        "AVOID BRICK WALLS",
+        "AVOID BRICK WALLS & ORANGE HUNTER",
         "COLLECT RED APPLES",
+        "BEWARE: THE HUNTER FOLLOWS YOU!",
         "",
         "PRESS ANY KEY TO START"
     ]
@@ -210,10 +300,14 @@ def show_title_screen():
     demo_obstacles = [(50, height-100, 80, 20), (width-130, height-100, 80, 20)]
     draw_obstacles(demo_obstacles)
     
-    # Demo snake
+    # Demo player snake
     demo_snake = [[width/2 - 30, height-70], [width/2 - 20, height-70], [width/2 - 10, height-70],
                   [width/2, height-70], [width/2 + 10, height-70]]
     draw_snake(10, demo_snake)
+    
+    # Demo hunter snake following the player
+    demo_hunter_snake = [[width/2 - 60, height-70], [width/2 - 50, height-70], [width/2 - 40, height-70]]
+    draw_snake(10, demo_hunter_snake, is_hunter=True)
     
     pygame.display.update()
     
@@ -233,20 +327,43 @@ def gameLoop():
     game_over = False
     game_paused = False
 
-    # Initial snake position
+    # Initial player snake position
     snake_list = []
     snake_head_x = width / 2
     snake_head_y = height / 2
     snake_list.append([snake_head_x, snake_head_y])
+    
+    # Initial hunter snake position (start in a different corner)
+    hunter_snake_list = []
+    hunter_head_x = width / 4
+    hunter_head_y = height / 4
+    hunter_snake_list.append([hunter_head_x, hunter_head_y])
+    
+    # Hunter snake direction variables
+    hunter_x_change = 0  # Start with no movement
+    hunter_y_change = 0
+    
+    # Hunter snake AI variables
+    target_update_delay = 15  # Update target every N frames
+    target_update_counter = 0
+    current_target_x = 0
+    current_target_y = 0
+    hunter_score = 1  # Start with length 1
+    hunter_activated = False  # Hunter won't move until player moves
+    
+    # Target commitment variables
+    target_commitment_duration = 60  # Frames to stick with a target
+    current_commitment_counter = 0
+    current_target_type = "none"  # Can be "player" or "food" or "none"
 
-    # Generate obstacles first (moved up from below)
+    # Generate obstacles first
     obstacles = generate_obstacles()
 
-    # Direction variables
+    # Direction variables for player snake
     x_change = 0
     y_change = 0
 
-    score = 0
+    score = 1  # Start with length 1 to be consistent
     high_score = 0  # Load high score from a file or initialize to 0
 
     try:
@@ -257,7 +374,7 @@ def gameLoop():
 
     clock = pygame.time.Clock()
 
-    # Food properties - ensure food doesn't spawn on obstacles
+    # First food position
     food_x = 0
     food_y = 0
     valid_position = False
@@ -265,6 +382,17 @@ def gameLoop():
         food_x = round(random.randrange(0, width - snake_block_size) / 10.0) * 10.0
         food_y = round(random.randrange(0, height - snake_block_size) / 10.0) * 10.0
         valid_position = not is_collision_with_obstacles(food_x, food_y, obstacles)
+    
+    # Second food position
+    food2_x = 0
+    food2_y = 0
+    valid_position = False
+    while not valid_position:
+        food2_x = round(random.randrange(0, width - snake_block_size) / 10.0) * 10.0
+        food2_y = round(random.randrange(0, height - snake_block_size) / 10.0) * 10.0
+        # Check it's not on obstacles or overlapping first food
+        valid_position = (not is_collision_with_obstacles(food2_x, food2_y, obstacles) and 
+                          not (food2_x == food_x and food2_y == food_y))
 
 
     while not game_over:
@@ -294,15 +422,19 @@ def gameLoop():
                 if event.key == pygame.K_LEFT:
                     x_change = -snake_block_size
                     y_change = 0
+                    hunter_activated = True  # Activate hunter when player first moves
                 elif event.key == pygame.K_RIGHT:
                     x_change = snake_block_size
                     y_change = 0
+                    hunter_activated = True  # Activate hunter when player first moves
                 elif event.key == pygame.K_UP:
                     y_change = -snake_block_size
                     x_change = 0
+                    hunter_activated = True  # Activate hunter when player first moves
                 elif event.key == pygame.K_DOWN:
                     y_change = snake_block_size
                     x_change = 0
+                    hunter_activated = True  # Activate hunter when player first moves
                 elif event.key == pygame.K_SPACE:
                     game_paused = True
                 elif event.key == pygame.K_c and game_paused:
@@ -311,7 +443,7 @@ def gameLoop():
         if game_over:
             break
 
-        # Snake movement with teleportation
+        # Player snake movement with teleportation
         snake_head_x += x_change
         snake_head_y += y_change
 
@@ -324,6 +456,84 @@ def gameLoop():
             snake_head_y = 0
         elif snake_head_y < 0:
             snake_head_y = height - snake_block_size
+            
+        # Hunter snake AI logic
+        hunter_head_x = hunter_snake_list[-1][0]
+        hunter_head_y = hunter_snake_list[-1][1]
+        
+        if hunter_activated:  # Only process hunter movement if activated
+            target_update_counter += 1
+            current_commitment_counter += 1
+            
+            # Update targeting with commitment to choices
+            if current_commitment_counter >= target_commitment_duration:
+                # Time to potentially switch targets - reset commitment counter
+                current_commitment_counter = 0
+                
+                # Calculate distances
+                distance_to_player = calculate_distance(hunter_head_x, hunter_head_y, snake_head_x, snake_head_y)
+                distance_to_food1 = calculate_distance(hunter_head_x, hunter_head_y, food_x, food_y)
+                distance_to_food2 = calculate_distance(hunter_head_x, hunter_head_y, food2_x, food2_y)
+                
+                # Get the closest food
+                closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
+                closest_food_distance = min(distance_to_food1, distance_to_food2)
+                
+                # Only switch targets if there's a significant difference
+                # or if this is the first target selection
+                if current_target_type == "none" or abs(distance_to_player - closest_food_distance) > 50:
+                    if distance_to_player < closest_food_distance:
+                        current_target_type = "player"
+                        current_target_x = snake_head_x
+                        current_target_y = snake_head_y
+                    else:
+                        current_target_type = "food"
+                        current_target_x = closest_food_x
+                        current_target_y = closest_food_y
+            
+            # Even when committed to a target type, update the actual position each frame
+            # This ensures the hunter follows moving targets smoothly
+            if target_update_counter >= target_update_delay:
+                target_update_counter = 0
+                
+                if current_target_type == "player":
+                    # Update player target position
+                    current_target_x = snake_head_x
+                    current_target_y = snake_head_y
+                elif current_target_type == "food":
+                    # Update food target position (choosing closest food)
+                    distance_to_food1 = calculate_distance(hunter_head_x, hunter_head_y, food_x, food_y)
+                    distance_to_food2 = calculate_distance(hunter_head_x, hunter_head_y, food2_x, food2_y)
+                    
+                    if distance_to_food1 < distance_to_food2:
+                        current_target_x = food_x
+                        current_target_y = food_y
+                    else:
+                        current_target_x = food2_x
+                        current_target_y = food2_y
+                    
+            # Get best direction to move (avoiding obstacles)
+            current_direction = {"dx": hunter_x_change, "dy": hunter_y_change}
+            hunter_x_change, hunter_y_change = get_hunter_direction(
+                hunter_head_x, hunter_head_y, 
+                current_target_x, current_target_y, 
+                obstacles, current_direction,
+                hunter_snake_list
+            )
+            
+            # Move hunter snake
+            hunter_head_x += hunter_x_change
+            hunter_head_y += hunter_y_change
+        
+        # Teleport hunter snake to the other side of the screen
+        if hunter_head_x >= width:
+            hunter_head_x = 0
+        elif hunter_head_x < 0:
+            hunter_head_x = width - snake_block_size
+        if hunter_head_y >= height:
+            hunter_head_y = 0
+        elif hunter_head_y < 0:
+            hunter_head_y = height - snake_block_size
 
         # ===== ROBUST REVERSAL HANDLING =====
         # The trick: We'll COMPLETELY REVERSE the snake's body when a 180° turn is detected
@@ -383,9 +593,16 @@ def gameLoop():
                 # (no need to delete segments - the entire snake is now facing the new direction)
         
         # Now do normal collision detection
+        # Check for player snake self-collision
         self_collision = False
         for i in range(len(snake_list) - 1):
             segment = snake_list[i]
+            if snake_head_x == segment[0] and snake_head_y == segment[1]:
+                self_collision = True
+                break
+        
+        # Check for collision with hunter snake
+        for segment in hunter_snake_list:
             if snake_head_x == segment[0] and snake_head_y == segment[1]:
                 self_collision = True
                 break
@@ -397,18 +614,70 @@ def gameLoop():
         if self_collision:
             game_over = True
 
-
-        # Check for obstacle collision
+        # Check for obstacle collision for player snake
         if is_collision_with_obstacles(snake_head_x, snake_head_y, obstacles):
             game_over = True
+            
+        # Check for hunter snake self-collision (hunter snake plays by same rules)
+        hunter_collision = False
+        for i in range(len(hunter_snake_list) - 1):
+            segment = hunter_snake_list[i]
+            if hunter_head_x == segment[0] and hunter_head_y == segment[1]:
+                hunter_collision = True
+                break
+                
+        # Check for collision with player snake (except head-to-head)
+        if not (hunter_head_x == snake_head_x and hunter_head_y == snake_head_y):
+            for segment in snake_list[:-1]:  # Exclude player's head
+                if hunter_head_x == segment[0] and hunter_head_y == segment[1]:
+                    hunter_collision = True
+                    break
+        
+        if hunter_collision:
+            # If hunter snake collides, reset it but don't end the game
+            hunter_snake_list = [[random.randrange(0, width - snake_block_size, snake_block_size), 
+                                random.randrange(0, height - snake_block_size, snake_block_size)]]
+            hunter_score = 1
 
-        # Update snake list
+        # First, check for food collisions for both snakes
+
+        # Check if the hunter snake ate food before processing movement
+        hunter_ate_food1 = hunter_head_x == food_x and hunter_head_y == food_y
+        hunter_ate_food2 = hunter_head_x == food2_x and hunter_head_y == food2_y
+        
+        # Check if the player snake ate food before processing movement
+        player_ate_food1 = snake_head_x == food_x and snake_head_y == food_y
+        player_ate_food2 = snake_head_x == food2_x and snake_head_y == food2_y
+        
+        # If both snakes try to eat the same food in the same frame, prioritize player
+        if player_ate_food1 and hunter_ate_food1:
+            hunter_ate_food1 = False
+        if player_ate_food2 and hunter_ate_food2:
+            hunter_ate_food2 = False
+            
+        # Process food collision for hunter snake BEFORE updating segments
+        if hunter_ate_food1 or hunter_ate_food2:
+            hunter_score += 1  # Increase the score immediately before updating the snake segment
+            
+        # Process food collision for player snake
+        if player_ate_food1 or player_ate_food2:
+            score += 1  # Increase the score immediately before updating the snake segment
+        
+        # Update player snake list
         snake_list.append([snake_head_x, snake_head_y])
-        if len(snake_list) > score + 1:  # Keep the length of the snake equal to the score + 1 (initial size)
+        if len(snake_list) > score:  # Now just compare to score (not score+1)
             del snake_list[0]
+            
+        # Add new head position
+        hunter_snake_list.append([hunter_head_x, hunter_head_y])
+        
+        # Always ensure the snake length matches the score
+        while len(hunter_snake_list) > hunter_score:
+            # Remove the oldest segment if we're longer than we should be
+            del hunter_snake_list[0]
 
-        # Check for food collision
-        if snake_head_x == food_x and snake_head_y == food_y:
+        # Process food collision for player snake (using flags) - only respawn food, don't increment score
+        if player_ate_food1:
             # Generate new food position
             valid_position = False
             while not valid_position:
@@ -418,14 +687,98 @@ def gameLoop():
                 # Check if food is on any obstacle
                 valid_position = not is_collision_with_obstacles(food_x, food_y, obstacles)
                 
-                # Also check if food is on snake body
+                # Also check if food is on any snake body or other food
+                if valid_position:
+                    # Check player snake
+                    for segment in snake_list:
+                        if food_x == segment[0] and food_y == segment[1]:
+                            valid_position = False
+                            break
+                    # Check hunter snake
+                    if valid_position:
+                        for segment in hunter_snake_list:
+                            if food_x == segment[0] and food_y == segment[1]:
+                                valid_position = False
+                                break
+                    # Check other food
+                    if valid_position and food_x == food2_x and food_y == food2_y:
+                        valid_position = False
+            
+        # Check for player snake collision with second food
+        elif player_ate_food2:
+            # Generate new food position
+            valid_position = False
+            while not valid_position:
+                food2_x = round(random.randrange(0, width - snake_block_size) / 10.0) * 10.0
+                food2_y = round(random.randrange(0, height - snake_block_size) / 10.0) * 10.0
+                
+                # Check if food is on any obstacle
+                valid_position = not is_collision_with_obstacles(food2_x, food2_y, obstacles)
+                
+                # Check if food is on any snake body or other food
+                if valid_position:
+                    # Check player snake
+                    for segment in snake_list:
+                        if food2_x == segment[0] and food2_y == segment[1]:
+                            valid_position = False
+                            break
+                    # Check hunter snake
+                    if valid_position:
+                        for segment in hunter_snake_list:
+                            if food2_x == segment[0] and food2_y == segment[1]:
+                                valid_position = False
+                                break
+                    # Check other food
+                    if valid_position and food2_x == food_x and food2_y == food_y:
+                        valid_position = False
+            
+        # Process food collision for hunter snake (using flags) - only respawn food, don't increment score
+        if hunter_ate_food1:
+            # Generate new food position
+            valid_position = False
+            while not valid_position:
+                food_x = round(random.randrange(0, width - snake_block_size) / 10.0) * 10.0
+                food_y = round(random.randrange(0, height - snake_block_size) / 10.0) * 10.0
+                
+                # Similar validation as above
+                valid_position = not is_collision_with_obstacles(food_x, food_y, obstacles)
+                
                 if valid_position:
                     for segment in snake_list:
                         if food_x == segment[0] and food_y == segment[1]:
                             valid_position = False
                             break
-
-            score += 1
+                    if valid_position:
+                        for segment in hunter_snake_list:
+                            if food_x == segment[0] and food_y == segment[1]:
+                                valid_position = False
+                                break
+                    if valid_position and food_x == food2_x and food_y == food2_y:
+                        valid_position = False
+            
+        # Check for hunter snake collision with second food
+        elif hunter_ate_food2:
+            # Generate new food position
+            valid_position = False
+            while not valid_position:
+                food2_x = round(random.randrange(0, width - snake_block_size) / 10.0) * 10.0
+                food2_y = round(random.randrange(0, height - snake_block_size) / 10.0) * 10.0
+                
+                # Similar validation as above
+                valid_position = not is_collision_with_obstacles(food2_x, food2_y, obstacles)
+                
+                if valid_position:
+                    for segment in snake_list:
+                        if food2_x == segment[0] and food2_y == segment[1]:
+                            valid_position = False
+                            break
+                    if valid_position:
+                        for segment in hunter_snake_list:
+                            if food2_x == segment[0] and food2_y == segment[1]:
+                                valid_position = False
+                                break
+                    if valid_position and food2_x == food_x and food2_y == food_y:
+                        valid_position = False
 
         # Update high score
         high_score = max(high_score, score)
@@ -434,19 +787,26 @@ def gameLoop():
         screen.fill(black)
         draw_obstacles(obstacles)  # Draw obstacles first
         
-        # Draw NES-style food (blinking apple)
-        food_color = (255, 0, 0) if pygame.time.get_ticks() % 500 < 250 else (220, 50, 50)
-        food_outline_color = (150, 0, 0)
-        pygame.draw.rect(screen, food_color, [food_x, food_y, snake_block_size, snake_block_size])
-        pygame.draw.rect(screen, food_outline_color, [food_x, food_y, snake_block_size, snake_block_size], 1)
+        # Draw foods (blinking apples)
+        def draw_food(food_x, food_y):
+            food_color = (255, 0, 0) if pygame.time.get_ticks() % 500 < 250 else (220, 50, 50)
+            food_outline_color = (150, 0, 0)
+            pygame.draw.rect(screen, food_color, [food_x, food_y, snake_block_size, snake_block_size])
+            pygame.draw.rect(screen, food_outline_color, [food_x, food_y, snake_block_size, snake_block_size], 1)
+            
+            # Add a little stem on top to make it look like an apple
+            stem_color = (0, 100, 0)
+            pygame.draw.line(screen, stem_color, 
+                            (food_x + snake_block_size//2, food_y), 
+                            (food_x + snake_block_size//2, food_y - 3), 2)
         
-        # Add a little stem on top to make it look like an apple
-        stem_color = (0, 100, 0)
-        pygame.draw.line(screen, stem_color, 
-                         (food_x + snake_block_size//2, food_y), 
-                         (food_x + snake_block_size//2, food_y - 3), 2)
+        # Draw both foods
+        draw_food(food_x, food_y)
+        draw_food(food2_x, food2_y)
         
+        # Draw both snakes
         draw_snake(snake_block_size, snake_list)
+        draw_snake(snake_block_size, hunter_snake_list, is_hunter=True)
         show_score(score, is_reversal)
 
         pygame.display.update()
