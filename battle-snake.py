@@ -601,10 +601,10 @@ def gameLoop():
                 self_collision = True
                 break
         
-        # Check for collision with hunter snake
+        # Check for collision with hunter snake (any part of hunter snake hitting player = game over)
         for segment in hunter_snake_list:
             if snake_head_x == segment[0] and snake_head_y == segment[1]:
-                self_collision = True
+                self_collision = True  # Player dies on contact with hunter
                 break
         
         # If snake has only one segment, no reversal is possible
@@ -626,15 +626,15 @@ def gameLoop():
                 hunter_collision = True
                 break
                 
-        # Check for collision with player snake (except head-to-head)
-        if not (hunter_head_x == snake_head_x and hunter_head_y == snake_head_y):
-            for segment in snake_list[:-1]:  # Exclude player's head
-                if hunter_head_x == segment[0] and hunter_head_y == segment[1]:
-                    hunter_collision = True
-                    break
+        # Check for collision between hunter's head and player's body
+        # When hunter hits player's body, player dies (hunter eats player)
+        for segment in snake_list:
+            if hunter_head_x == segment[0] and hunter_head_y == segment[1]:
+                game_over = True  # Game over when hunter eats any part of player
+                break
         
         if hunter_collision:
-            # If hunter snake collides, reset it but don't end the game
+            # If hunter snake collides with itself, reset it but don't end the game
             hunter_snake_list = [[random.randrange(0, width - snake_block_size, snake_block_size), 
                                 random.randrange(0, height - snake_block_size, snake_block_size)]]
             hunter_score = 1
