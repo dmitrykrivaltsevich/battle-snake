@@ -1,9 +1,8 @@
 # Battle Snake - NES Style
 
 A retro-inspired Snake game with brick wall obstacles reminiscent of the classic Tank 1990/Battle City from the NES era.
-
-<img width="912" alt="Screenshot 2025-03-12 at 23 28 19" src="https://github.com/user-attachments/assets/c8bece75-b931-4579-b558-818af2cf976b" />
-<img width="912" alt="Screenshot 2025-03-12 at 23 28 23" src="https://github.com/user-attachments/assets/f7f2e768-d1d1-4bb5-b590-4f09a399bf99" />
+<img width="868" alt="Screenshot 2025-03-13 at 00 10 44" src="https://github.com/user-attachments/assets/1d6ef88e-025f-43fd-89bf-b755a7e06ad8" />
+<img width="912" alt="Screenshot 2025-03-13 at 00 15 46" src="https://github.com/user-attachments/assets/7945292e-6c77-4e51-b39d-e49679606c9f" />
 <img width="912" alt="Screenshot 2025-03-12 at 23 28 36" src="https://github.com/user-attachments/assets/76a0f811-ba4f-4bf6-8cd0-37e0e4012644" />
 
 
