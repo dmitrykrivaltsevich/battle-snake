@@ -437,8 +437,13 @@ def gameLoop():
                     hunter_activated = True  # Activate hunter when player first moves
                 elif event.key == pygame.K_SPACE:
                     game_paused = True
-                elif event.key == pygame.K_c and game_paused:
+                elif event.key == pygame.K_c:
                     game_paused = False
+                elif event.key == pygame.K_q:
+                    game_over = True
+                elif event.key == pygame.K_r:
+                    # Restart the game immediately
+                    return gameLoop()
 
         if game_over:
             break
