@@ -2,6 +2,11 @@
 
 A retro-inspired Snake game with brick wall obstacles reminiscent of the classic Tank 1990/Battle City from the NES era.
 
+<img width="912" alt="Screenshot 2025-03-12 at 23 28 19" src="https://github.com/user-attachments/assets/c8bece75-b931-4579-b558-818af2cf976b" />
+<img width="912" alt="Screenshot 2025-03-12 at 23 28 23" src="https://github.com/user-attachments/assets/f7f2e768-d1d1-4bb5-b590-4f09a399bf99" />
+<img width="912" alt="Screenshot 2025-03-12 at 23 28 36" src="https://github.com/user-attachments/assets/76a0f811-ba4f-4bf6-8cd0-37e0e4012644" />
+
+
 ## Features
 
 - Classic snake gameplay with NES-style graphics
