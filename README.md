@@ -3,7 +3,7 @@
 A retro-inspired Snake game with brick wall obstacles reminiscent of the classic Tank 1990/Battle City from the NES era, now featuring an AI-controlled hunter snake!
 
 <img width="868" alt="Screenshot 2025-03-13 at 00 10 44" src="https://github.com/user-attachments/assets/1d6ef88e-025f-43fd-89bf-b755a7e06ad8" />
-<img width="912" alt="Screenshot 2025-03-13 at 00 15 46" src="https://github.com/user-attachments/assets/7945292e-6c77-4e51-b39d-e49679606c9f" />
+<img width="912" alt="Screenshot 2025-03-13 at 09 02 27" src="https://github.com/user-attachments/assets/d45fa72b-5389-4608-b33f-a781ccf76474" />
 <img width="912" alt="Screenshot 2025-03-12 at 23 28 36" src="https://github.com/user-attachments/assets/76a0f811-ba4f-4bf6-8cd0-37e0e4012644" />
 
 
