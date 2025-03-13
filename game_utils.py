@@ -21,6 +21,92 @@ def is_collision_with_obstacles(x, y, obstacles, block_size=SNAKE_BLOCK_SIZE):
             return True
     return False
 
+def is_player_visible(hunter_x, hunter_y, player_x, player_y, obstacles, current_direction=None, 
+                      block_size=SNAKE_BLOCK_SIZE, max_view_distance=250):
+    """
+    Determine if the player is visible to the hunter (line of sight not blocked by obstacles).
+    
+    Args:
+        hunter_x, hunter_y: Hunter head position
+        player_x, player_y: Player head position
+        obstacles: List of obstacles (x, y, width, height)
+        current_direction: Current hunter direction (for field of view calculation)
+        block_size: Size of snake blocks
+        max_view_distance: Maximum distance the hunter can "see"
+        
+    Returns:
+        Boolean indicating if player is visible
+    """
+    # Check if player is within viewing distance
+    distance = calculate_distance(hunter_x, hunter_y, player_x, player_y)
+    if distance > max_view_distance:
+        return False
+    
+    # Check field of view if direction is provided (consider front, left, right but not behind)
+    if current_direction:
+        dx, dy = current_direction["dx"], current_direction["dy"]
+        # Calculate vector from hunter to player
+        direction_to_player_x = player_x - hunter_x
+        direction_to_player_y = player_y - hunter_y
+        
+        # Normalize vectors
+        hunter_dir_length = math.sqrt(dx**2 + dy**2)
+        if hunter_dir_length == 0:
+            hunter_dir_length = 1  # Avoid division by zero
+        norm_dx = dx / hunter_dir_length
+        norm_dy = dy / hunter_dir_length
+        
+        player_dir_length = math.sqrt(direction_to_player_x**2 + direction_to_player_y**2)
+        if player_dir_length == 0:
+            return True  # Player is right on top of hunter
+        norm_player_dx = direction_to_player_x / player_dir_length
+        norm_player_dy = direction_to_player_y / player_dir_length
+        
+        # Calculate dot product (cosine of angle between vectors)
+        dot_product = norm_dx * norm_player_dx + norm_dy * norm_player_dy
+        
+        # If player is behind hunter (dot product < 0), treat as not visible
+        # Allow 120 degree field of view (cos(120°/2) = -0.5)
+        if dot_product < -0.5:
+            return False
+    
+    # Check if line of sight is blocked by any obstacle
+    # Use Bresenham's line algorithm to check points along the line of sight
+    dx = abs(player_x - hunter_x)
+    dy = abs(player_y - hunter_y)
+    
+    # Determine direction
+    sx = 1 if hunter_x < player_x else -1
+    sy = 1 if hunter_y < player_y else -1
+    
+    err = dx - dy
+    
+    x, y = hunter_x, hunter_y
+    
+    # Step through the line from hunter to player
+    while not (x == player_x and y == player_y):
+        # Check for obstacle at current point
+        for obs_x, obs_y, obs_width, obs_height in obstacles:
+            if (x >= obs_x and x < obs_x + obs_width and
+                y >= obs_y and y < obs_y + obs_height):
+                # Line of sight blocked by obstacle
+                return False
+        
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x += sx
+        if e2 < dx:
+            err += dx
+            y += sy
+            
+        # If we've moved too far without finding player or obstacle, stop
+        if calculate_distance(hunter_x, hunter_y, x, y) > distance:
+            break
+    
+    # If we didn't hit any obstacles, player is visible
+    return True
+
 def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_direction, snake_body, 
                     block_size=SNAKE_BLOCK_SIZE, width=SCREEN_WIDTH, height=SCREEN_HEIGHT,
                     food_positions=None, player_position=None):

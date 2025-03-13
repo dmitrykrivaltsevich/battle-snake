@@ -1,7 +1,7 @@
 import pygame
 import random
 import math
-from game_utils import calculate_distance, is_collision_with_obstacles, get_hunter_direction
+from game_utils import calculate_distance, is_collision_with_obstacles, get_hunter_direction, is_player_visible
 from game_utils import SNAKE_BLOCK_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Initialize Pygame
@@ -300,7 +300,7 @@ def gameLoop():
     hunter_activated = False  # Hunter won't move until player moves
     
     # Target commitment variables
-    target_commitment_duration = 120  # Frames to stick with a target (balanced for 50/50 hunting/growth)
+    target_commitment_duration = 60  # Frames to stick with a target (balanced for 50/50 hunting/growth)
     current_commitment_counter = 0
     current_target_type = "none"  # Can be "player" or "food" or "none"
 
@@ -387,18 +387,32 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Balanced initial targeting (50/50 food vs player)
-                        hunting_bias = random.random()  # Random value 0-1
+                        # Check if player is visible to the hunter
+                        player_visible = is_player_visible(
+                            hunter_head_x, hunter_head_y, 
+                            snake_head_x, snake_head_y, 
+                            obstacles
+                        )
                         
-                        # 50% chance to target player if within reasonable range
-                        if hunting_bias > 0.5 and distance_to_player < 200:
-                            current_target_type = "player"
-                            current_target_x = snake_head_x
-                            current_target_y = snake_head_y
-                        else:
+                        # Calculate if food is close enough to be an immediate opportunity
+                        food_opportunity = closest_food_distance < 80
+                        
+                        # Base targeting on visibility
+                        if not player_visible:
+                            # Player not visible, target food
                             current_target_type = "food"
                             current_target_x = closest_food_x
                             current_target_y = closest_food_y
+                        else:
+                            # Player is visible - target player unless food is very close
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                                current_target_type = "food"
+                                current_target_x = closest_food_x
+                                current_target_y = closest_food_y
+                            else:
+                                current_target_type = "player"
+                                current_target_x = snake_head_x
+                                current_target_y = snake_head_y
                 elif key == pygame.K_RIGHT:
                     x_change = snake_block_size
                     y_change = 0
@@ -414,18 +428,32 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Balanced initial targeting (50/50 food vs player)
-                        hunting_bias = random.random()  # Random value 0-1
+                        # Check if player is visible to the hunter
+                        player_visible = is_player_visible(
+                            hunter_head_x, hunter_head_y, 
+                            snake_head_x, snake_head_y, 
+                            obstacles
+                        )
                         
-                        # 50% chance to target player if within reasonable range
-                        if hunting_bias > 0.5 and distance_to_player < 200:
-                            current_target_type = "player"
-                            current_target_x = snake_head_x
-                            current_target_y = snake_head_y
-                        else:
+                        # Calculate if food is close enough to be an immediate opportunity
+                        food_opportunity = closest_food_distance < 80
+                        
+                        # Base targeting on visibility
+                        if not player_visible:
+                            # Player not visible, target food
                             current_target_type = "food"
                             current_target_x = closest_food_x
                             current_target_y = closest_food_y
+                        else:
+                            # Player is visible - target player unless food is very close
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                                current_target_type = "food"
+                                current_target_x = closest_food_x
+                                current_target_y = closest_food_y
+                            else:
+                                current_target_type = "player"
+                                current_target_x = snake_head_x
+                                current_target_y = snake_head_y
                 elif key == pygame.K_UP:
                     y_change = -snake_block_size
                     x_change = 0
@@ -441,18 +469,32 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Balanced initial targeting (50/50 food vs player)
-                        hunting_bias = random.random()  # Random value 0-1
+                        # Check if player is visible to the hunter
+                        player_visible = is_player_visible(
+                            hunter_head_x, hunter_head_y, 
+                            snake_head_x, snake_head_y, 
+                            obstacles
+                        )
                         
-                        # 50% chance to target player if within reasonable range
-                        if hunting_bias > 0.5 and distance_to_player < 200:
-                            current_target_type = "player"
-                            current_target_x = snake_head_x
-                            current_target_y = snake_head_y
-                        else:
+                        # Calculate if food is close enough to be an immediate opportunity
+                        food_opportunity = closest_food_distance < 80
+                        
+                        # Base targeting on visibility
+                        if not player_visible:
+                            # Player not visible, target food
                             current_target_type = "food"
                             current_target_x = closest_food_x
                             current_target_y = closest_food_y
+                        else:
+                            # Player is visible - target player unless food is very close
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                                current_target_type = "food"
+                                current_target_x = closest_food_x
+                                current_target_y = closest_food_y
+                            else:
+                                current_target_type = "player"
+                                current_target_x = snake_head_x
+                                current_target_y = snake_head_y
                 elif key == pygame.K_DOWN:
                     y_change = snake_block_size
                     x_change = 0
@@ -468,18 +510,32 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Balanced initial targeting (50/50 food vs player)
-                        hunting_bias = random.random()  # Random value 0-1
+                        # Check if player is visible to the hunter
+                        player_visible = is_player_visible(
+                            hunter_head_x, hunter_head_y, 
+                            snake_head_x, snake_head_y, 
+                            obstacles
+                        )
                         
-                        # 50% chance to target player if within reasonable range
-                        if hunting_bias > 0.5 and distance_to_player < 200:
-                            current_target_type = "player"
-                            current_target_x = snake_head_x
-                            current_target_y = snake_head_y
-                        else:
+                        # Calculate if food is close enough to be an immediate opportunity
+                        food_opportunity = closest_food_distance < 80
+                        
+                        # Base targeting on visibility
+                        if not player_visible:
+                            # Player not visible, target food
                             current_target_type = "food"
                             current_target_x = closest_food_x
                             current_target_y = closest_food_y
+                        else:
+                            # Player is visible - target player unless food is very close
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                                current_target_type = "food"
+                                current_target_x = closest_food_x
+                                current_target_y = closest_food_y
+                            else:
+                                current_target_type = "player"
+                                current_target_x = snake_head_x
+                                current_target_y = snake_head_y
                 elif key == pygame.K_SPACE:
                     game_paused = True
                 elif key == pygame.K_c:  # C key to continue game
@@ -531,50 +587,56 @@ def gameLoop():
                 closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                 closest_food_distance = min(distance_to_food1, distance_to_food2)
                 
-                # Balanced targeting logic (50/50 growth vs hunting):
-                # Create a "targeting bias" that balances player vs food
-                hunting_bias = random.random()  # Random value 0-1 to add variation
+                # Line-of-sight and visibility-based targeting logic
+                # Check if the player is visible to the hunter
+                player_visible = is_player_visible(
+                    hunter_head_x, hunter_head_y,
+                    snake_head_x, snake_head_y,
+                    obstacles,
+                    current_direction={"dx": hunter_x_change, "dy": hunter_y_change}
+                )
                 
-                # Factor in hunter size - larger hunter = more aggressive
-                if hunter_score > 5:
-                    hunting_bias += 0.2  # Boost aggressiveness when bigger
+                # Calculate how attractive food is based on distance
+                food_opportunity = closest_food_distance < 80  # Food is very close by
                 
-                # Factor in player size - larger player = more appealing target
-                if score > 10:
-                    hunting_bias += 0.2  # Bigger player is more appealing target
-                
-                # Base comparison values with added randomness
-                player_value = distance_to_player * (0.8 + 0.4 * random.random())
-                food_value = closest_food_distance
-                
-                # Initial targeting
+                # Initial targeting logic when hunter has no target yet
                 if current_target_type == "none":
-                    # 50% chance to start with player or food if both are viable
-                    if hunting_bias > 0.5 and distance_to_player < 200:
-                        current_target_type = "player"
-                        current_target_x = snake_head_x
-                        current_target_y = snake_head_y
-                    else:
+                    # Default to food if player isn't visible
+                    if not player_visible:
                         current_target_type = "food"
                         current_target_x = closest_food_x
                         current_target_y = closest_food_y
+                    # When player is visible, target player unless food is very close
+                    else:
+                        if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                            # Grab the easy food first, then hunt player
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
+                        else:
+                            # Player is visible and no close food - hunt player
+                            current_target_type = "player"
+                            current_target_x = snake_head_x
+                            current_target_y = snake_head_y
                 
-                # When re-evaluating targeting:
+                # When already targeting food
                 elif current_target_type == "food":
                     # Switch to player if:
-                    # 1. Player is close, or
-                    # 2. Random chance (more aggressive hunting)
-                    if distance_to_player < 150 or (hunting_bias > 0.6 and distance_to_player < 250):
+                    # 1. Player becomes visible and
+                    # 2. No immediate food opportunity and
+                    # 3. Player is within reasonable hunting distance
+                    if player_visible and not food_opportunity and distance_to_player < 200:
                         current_target_type = "player"
                         current_target_x = snake_head_x
                         current_target_y = snake_head_y
                 
+                # When already targeting player
                 elif current_target_type == "player":
                     # Switch to food if:
-                    # 1. Food is significantly closer, or
-                    # 2. Player is very far away
-                    # 3. Random chance (focus on growth)
-                    if closest_food_distance < distance_to_player * 0.7 or distance_to_player > 300 or (hunting_bias < 0.3 and closest_food_distance < 150):
+                    # 1. Player is no longer visible, or
+                    # 2. Food is very close (opportunistic grab), or
+                    # 3. Player has moved very far away
+                    if (not player_visible) or (food_opportunity and closest_food_distance < 60) or distance_to_player > 300:
                         current_target_type = "food"
                         current_target_x = closest_food_x
                         current_target_y = closest_food_y
