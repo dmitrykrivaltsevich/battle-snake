@@ -409,39 +409,46 @@ def gameLoop():
                     game_over = True
                     game_paused = False
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        game_over = True
+                    key = event.key
+                    if key == pygame.K_q:  # Q key to quit game
+                        pygame.quit()
+                        return  # Exit the game completely
+                    elif key == pygame.K_c:  # C key to continue game
                         game_paused = False
-                    if event.key == pygame.K_c:
-                        game_paused = False
+                    elif key == pygame.K_r:  # R key to restart the game
+                        # Restart the game immediately
+                        return gameLoop()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_over = True
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
+                key = event.key
+                if key == pygame.K_LEFT:
                     x_change = -snake_block_size
                     y_change = 0
                     hunter_activated = True  # Activate hunter when player first moves
-                elif event.key == pygame.K_RIGHT:
+                elif key == pygame.K_RIGHT:
                     x_change = snake_block_size
                     y_change = 0
                     hunter_activated = True  # Activate hunter when player first moves
-                elif event.key == pygame.K_UP:
+                elif key == pygame.K_UP:
                     y_change = -snake_block_size
                     x_change = 0
                     hunter_activated = True  # Activate hunter when player first moves
-                elif event.key == pygame.K_DOWN:
+                elif key == pygame.K_DOWN:
                     y_change = snake_block_size
                     x_change = 0
                     hunter_activated = True  # Activate hunter when player first moves
-                elif event.key == pygame.K_SPACE:
+                elif key == pygame.K_SPACE:
                     game_paused = True
-                elif event.key == pygame.K_c:
-                    game_paused = False
-                elif event.key == pygame.K_q:
-                    game_over = True
-                elif event.key == pygame.K_r:
+                elif key == pygame.K_c:  # C key to continue game
+                    if game_paused:
+                        game_paused = False
+                elif key == pygame.K_q:  # Q key to quit game
+                    pygame.quit()
+                    return  # Exit the game completely
+                elif key == pygame.K_r:  # R key to restart the game
                     # Restart the game immediately
                     return gameLoop()
 
@@ -876,14 +883,20 @@ def gameLoop():
                 pygame.quit()
                 exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
+                key = event.key
+                if key == pygame.K_r:
                     # Restart the game
                     waiting_for_input = False
                     gameLoop()
                     return  # Important: Return after restarting to prevent recursion
-                elif event.key == pygame.K_q:
+                elif key == pygame.K_q:
                     pygame.quit()
                     exit()
+                elif key == pygame.K_c:
+                    # Continue/restart the game (same as R key)
+                    waiting_for_input = False
+                    gameLoop()
+                    return
 
 
 # Start the game

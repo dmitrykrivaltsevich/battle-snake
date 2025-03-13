@@ -48,13 +48,40 @@ A retro-inspired Snake game with brick wall obstacles reminiscent of the classic
 
 1. Ensure you have Python and Pygame installed:
    ```
-   pip install pygame
+   # Using uv (recommended)
+   pip install uv
+   uv venv
+   uv pip install -r requirements.txt
+   
+   # Or using standard venv
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install pygame pytest
    ```
 
 2. Run the game:
    ```
    python battle-snake.py
    ```
+
+## Testing
+
+The game includes unit tests to prevent regression bugs, especially for the control keys (C, R, Q).
+
+### Running tests
+```bash
+# Install uv if needed
+pip install uv
+
+# Then run the tests script
+./run_tests.sh
+```
+
+The test suite verifies:
+- Control key functionality (C, R, Q)
+- Hunter snake targeting logic
+- Food interaction mechanics
+- Collision detection
 
 ## Development Notes
 
