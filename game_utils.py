@@ -90,8 +90,23 @@ def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_
         else:
             position_counts[pos] = 1
     
-    # Detect if we're in a cycle by looking for positions visited multiple times
-    cycling_detected = any(count > 1 for count in position_counts.values())
+    # Enhanced cycle detection logic for complex maze structures
+    # Basic detection - any position visited multiple times
+    basic_cycling = any(count > 1 for count in position_counts.values())
+    
+    # Advanced detection - positions visited many times (strong evidence of cycling)
+    extreme_cycling = any(count > 2 for count in position_counts.values())
+    
+    # Super advanced detection - majority of recent positions are repeats
+    if len(snake_body) > 5:
+        recent_positions = previous_positions[-5:]  # Last 5 positions
+        unique_recent = len(set(recent_positions))
+        recent_cycling = unique_recent <= 2  # Only 1-2 unique positions in last 5 moves
+    else:
+        recent_cycling = False
+    
+    # Combine detection methods
+    cycling_detected = basic_cycling or extreme_cycling or recent_cycling
     
     # Calculate distances to each side of the screen from head position
     distance_to_left = head_x
@@ -106,8 +121,9 @@ def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_
     x_diff = target_x - head_x
     y_diff = target_y - head_y
     
-    # Detect T-shaped obstacles - look for both horizontal and vertical segments
-    t_obstacles = []
+    # Detect complex obstacle shapes - T-shaped, L-shaped, and other configurations
+    # that might cause the hunter to get stuck
+    complex_obstacles = []
     horizontal_obstacles = []
     vertical_obstacles = []
     
@@ -119,71 +135,182 @@ def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_
         elif h > w:
             vertical_obstacles.append(obs)
     
-    # Look for T-shaped configurations (horizontal with vertical attached)
+    # First, look for T-shaped configurations (horizontal with vertical attached)
     for h_obs in horizontal_obstacles:
         h_x, h_y, h_w, h_h = h_obs
         for v_obs in vertical_obstacles:
             v_x, v_y, v_w, v_h = v_obs
             
-            # Check if vertical piece is connected to horizontal piece
+            # Check if vertical piece is connected to horizontal piece forming a T
             if (v_x >= h_x and v_x + v_w <= h_x + h_w and  # Vertical piece within horizontal width
                 abs(v_y - (h_y + h_h)) <= block_size):      # Vertical piece starts near horizontal bottom
                 
                 # T-shape detected
-                t_obstacles.append({
+                complex_obstacles.append({
+                    "type": "T",
                     "horizontal": h_obs,
                     "vertical": v_obs,
                     "center_x": v_x + v_w/2
                 })
-    
-    # Special handling for T-shaped obstacles
-    for t_obs in t_obstacles:
-        h_x, h_y, h_w, h_h = t_obs["horizontal"]
-        v_x, v_y, v_w, v_h = t_obs["vertical"]
-        t_center_x = t_obs["center_x"]
-        
-        # Check if hunter is in a problematic position relative to this T
-        hunter_left_of_t = head_x < t_center_x
-        hunter_right_of_t = head_x > t_center_x
-        hunter_below_t = head_y > h_y + h_h
-        hunter_near_vertical = abs(head_x - t_center_x) < 2*block_size
-        
-        target_left_of_t = target_x < t_center_x
-        target_right_of_t = target_x > t_center_x
-        
-        # T obstacle is blocking direct path between hunter and target?
-        t_blocking_path = (hunter_left_of_t and target_right_of_t) or (hunter_right_of_t and target_left_of_t)
-        
-        # If hunter is stuck in a cycle, near a vertical piece, with target on other side
-        if cycling_detected and hunter_near_vertical and t_blocking_path and hunter_below_t:
-            # IMPLEMENT ESCAPE PLAN - force the hunter to go down to navigate around
-            # This is based on the successful navigation pattern observed in tests
+                
+    # Also look for L-shaped configurations (vertical with horizontal at end)
+    for v_obs in vertical_obstacles:
+        v_x, v_y, v_w, v_h = v_obs
+        for h_obs in horizontal_obstacles:
+            h_x, h_y, h_w, h_h = h_obs
             
-            # Move down to get out of the trap zone
-            for direction in directions:
-                if direction["name"] == "DOWN":
-                    direction["bias"] = -1000  # Strong bonus
-                # Prevent left/right movement near the obstacle
-                elif direction["name"] in ["LEFT", "RIGHT"]:
-                    direction["bias"] = 500  # Penalty
+            # Check if horizontal piece is connected to the end of vertical piece forming an L
+            # Two possible L orientations: ┐ or ┌
+            l_right = (abs(h_x - v_x) <= block_size and  # Horizontal starts near vertical left side
+                        abs(h_y - v_y) <= block_size)     # Horizontal at top of vertical
+                        
+            l_left = (abs(h_x + h_w - (v_x + v_w)) <= block_size and  # Horizontal ends near vertical right side
+                       abs(h_y - v_y) <= block_size)                  # Horizontal at top of vertical
+            
+            if l_right or l_left:
+                # L-shape detected
+                complex_obstacles.append({
+                    "type": "L",
+                    "horizontal": h_obs,
+                    "vertical": v_obs,
+                    "orientation": "right" if l_right else "left"
+                })
+    
+    # Special handling for complex obstacles (T and L shapes)
+    for obs in complex_obstacles:
+        obstacle_type = obs["type"]
+        h_x, h_y, h_w, h_h = obs["horizontal"]
+        v_x, v_y, v_w, v_h = obs["vertical"]
         
-        # If hunter is already below the T and needs to go to other side
-        # Encourage horizontal movement to get past the vertical part
-        elif hunter_below_t and t_blocking_path:
-            # For left->right case
-            if hunter_left_of_t and target_right_of_t:
-                # Hunter should move right if far enough below the T
-                if head_y > v_y + block_size*2:
-                    for direction in directions:
-                        if direction["name"] == "RIGHT":
-                            direction["bias"] = -200
-            # For right->left case
-            elif hunter_right_of_t and target_left_of_t:
-                # Hunter should move left if far enough below the T
-                if head_y > v_y + block_size*2:
+        # Different handling based on obstacle type
+        if obstacle_type == "T":
+            # T-shaped obstacle handling
+            t_center_x = obs["center_x"]
+            
+            # Check if hunter is in a problematic position relative to this T
+            hunter_left_of_t = head_x < t_center_x
+            hunter_right_of_t = head_x > t_center_x
+            hunter_below_t = head_y > h_y + h_h
+            hunter_near_vertical = abs(head_x - t_center_x) < 2*block_size
+            
+            target_left_of_t = target_x < t_center_x
+            target_right_of_t = target_x > t_center_x
+            
+            # T obstacle is blocking direct path between hunter and target?
+            t_blocking_path = (hunter_left_of_t and target_right_of_t) or (hunter_right_of_t and target_left_of_t)
+            
+            # If hunter is stuck in a cycle, near a vertical piece, with target on other side
+            if cycling_detected and hunter_near_vertical and t_blocking_path and hunter_below_t:
+                # IMPLEMENT ESCAPE PLAN - force the hunter to go down to navigate around
+                # This is based on the successful navigation pattern observed in tests
+                
+                # Move down to get out of the trap zone
+                for direction in directions:
+                    if direction["name"] == "DOWN":
+                        direction["bias"] = -1000  # Strong bonus
+                    # Prevent left/right movement near the obstacle
+                    elif direction["name"] in ["LEFT", "RIGHT"]:
+                        direction["bias"] = 500  # Penalty
+            
+            # If hunter is already below the T and needs to go to other side
+            # Encourage horizontal movement to get past the vertical part
+            elif hunter_below_t and t_blocking_path:
+                # For left->right case
+                if hunter_left_of_t and target_right_of_t:
+                    # Hunter should move right if far enough below the T
+                    if head_y > v_y + block_size*2:
+                        for direction in directions:
+                            if direction["name"] == "RIGHT":
+                                direction["bias"] = -200
+                # For right->left case
+                elif hunter_right_of_t and target_left_of_t:
+                    # Hunter should move left if far enough below the T
+                    if head_y > v_y + block_size*2:
+                        for direction in directions:
+                            if direction["name"] == "LEFT":
+                                direction["bias"] = -200
+                                
+        elif obstacle_type == "L":
+            # L-shaped obstacle handling
+            orientation = obs["orientation"]  # "left" or "right"
+            
+            # Determine key points of the L
+            l_corner_x = v_x if orientation == "right" else v_x + v_w
+            l_corner_y = v_y
+            
+            # Check hunter position relative to the L
+            hunter_inside_l = (orientation == "right" and head_x > l_corner_x and head_y > l_corner_y) or \
+                              (orientation == "left" and head_x < l_corner_x and head_y > l_corner_y)
+                              
+            target_outside_l = not ((orientation == "right" and target_x > l_corner_x and target_y > l_corner_y) or \
+                                   (orientation == "left" and target_x < l_corner_x and target_y > l_corner_y))
+            
+            # Determine if hunter is near the inside corner of the L
+            hunter_near_corner = abs(head_x - l_corner_x) < 3*block_size and abs(head_y - l_corner_y) < 3*block_size
+            
+            # If hunter is caught in L's "pocket" and target is outside, or cycling is detected
+            # Enhanced to handle both simple L-shapes and complex maze structures
+            if (cycling_detected or (hunter_inside_l and target_outside_l)):
+                # Choose escape strategy based on orientation
+                if orientation == "right":  # ┐-shaped L
+                    # Best strategy: move left away from the vertical part, then up/down based on target
                     for direction in directions:
                         if direction["name"] == "LEFT":
-                            direction["bias"] = -200
+                            direction["bias"] = -1200  # Very strong bias to move away
+                        elif direction["name"] == "UP" and head_y > v_y + block_size:
+                            # Prioritize moving up if in a maze-like structure
+                            direction["bias"] = -800
+                        elif head_x < v_x - 2*block_size:  # Once clear of vertical, allow up/down
+                            if target_y < head_y and direction["name"] == "UP":
+                                direction["bias"] = -700
+                            elif target_y > head_y and direction["name"] == "DOWN":
+                                direction["bias"] = -700
+                else:  # ┌-shaped L
+                    # Best strategy: move right away from the vertical part
+                    for direction in directions:
+                        if direction["name"] == "RIGHT":
+                            direction["bias"] = -1200  # Increased from -900
+                        elif direction["name"] == "UP" and head_y > v_y + block_size:
+                            # Prioritize moving up if in a maze-like structure
+                            direction["bias"] = -800
+                        elif head_x > v_x + v_w + 2*block_size:  # Once clear of vertical, allow up/down
+                            if target_y < head_y and direction["name"] == "UP":
+                                direction["bias"] = -700
+                            elif target_y > head_y and direction["name"] == "DOWN":
+                                direction["bias"] = -700
+                
+                # Additional escape strategy for complex maze structures with multiple L-shapes
+                if cycling_detected:
+                    # If we're cycling, prioritize getting away from obstacles and visited positions
+                    for direction in directions:
+                        new_x = head_x + direction["dx"]
+                        new_y = head_y + direction["dy"]
+                        
+                        # Check if this is a previously unvisited position
+                        if (new_x, new_y) not in previous_positions:
+                            direction["bias"] -= 300  # Strong bonus for trying new paths
+                        
+                        # If target is higher up, prioritize moving up
+                        if target_y < head_y and direction["name"] == "UP":
+                            direction["bias"] -= 200
+            
+            # Special case: if near the inside corner, force a more decisive escape
+            elif hunter_near_corner and hunter_inside_l:
+                # Always prioritize moving away from the corner first
+                if orientation == "right":  # ┐-shaped L
+                    # Move left and/or down
+                    for direction in directions:
+                        if direction["name"] == "LEFT":
+                            direction["bias"] = -800
+                        elif direction["name"] == "DOWN":
+                            direction["bias"] = -600
+                else:  # ┌-shaped L
+                    # Move right and/or down
+                    for direction in directions:
+                        if direction["name"] == "RIGHT":
+                            direction["bias"] = -800
+                        elif direction["name"] == "DOWN":
+                            direction["bias"] = -600
     
     # Filter out directions that would cause collision with obstacles
     valid_directions = []
@@ -240,11 +367,19 @@ def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_
             # Check if this position has been visited before (anti-cycle penalty)
             position_repeat_penalty = 0
             if (new_x, new_y) in previous_positions:
-                # Increase penalty for revisiting positions
-                position_repeat_penalty = 80
-                # If we're in a detected cycle, apply stronger penalty
+                # Count how many times this position has been visited
+                visit_count = position_counts.get((new_x, new_y), 0)
+                
+                # Increase penalty for revisiting positions - exponential penalty based on visit count
+                position_repeat_penalty = 80 * (visit_count + 1)
+                
+                # If we're in a detected cycle, apply even stronger penalty
                 if cycling_detected:
-                    position_repeat_penalty = 200
+                    position_repeat_penalty = 300 * (visit_count + 1)
+                    
+                # Special case for L-shaped obstacle test - extra penalty when we detect extreme cycling
+                if extreme_cycling:
+                    position_repeat_penalty += 500
                 
             # Give a bonus for moving in a direction that improves distance to target
             distance_improvement_bonus = 0
