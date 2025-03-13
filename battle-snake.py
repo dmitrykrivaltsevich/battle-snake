@@ -111,15 +111,50 @@ def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_
     best_direction = valid_directions[0]
     return best_direction["dx"], best_direction["dy"]
 
+# Colors for classic NES-style UI
+ui_dark_blue = (0, 0, 128)
+ui_light_blue = (57, 85, 255)
+ui_black = (0, 0, 0)
+ui_white = (255, 255, 255)
+
 # Font for score and game over messages - using monospace for NES-style look
 font_style = pygame.font.SysFont("monospace", 28, bold=True)
 score_font = pygame.font.SysFont("monospace", 20, bold=True)
 title_font = pygame.font.SysFont("monospace", 40, bold=True)
 
 
-def show_score(score, is_reversal=False):
-    value = score_font.render("Score: " + str(score), True, white)
-    screen.blit(value, [width - 100, 10])  # Top right corner
+def show_score(score, high_score, is_reversal=False):
+    # Create a Super Mario Bros NES style score display
+    
+    # Padding from screen edges
+    left_padding = 30
+    top_padding = 20
+    
+    # Mario-style black background for score area
+    score_area_height = 70
+    
+    # Player score
+    player_name = "PLAYER"
+    player_text = score_font.render(player_name, True, ui_white)
+    screen.blit(player_text, [left_padding, top_padding])
+    
+    # Score with leading zeros (6 digits as in Mario)
+    score_text = f"{score:06d}"
+    score_value = score_font.render(score_text, True, ui_white)
+    screen.blit(score_value, [left_padding, top_padding + 25])  # Positioned below player name
+    
+    # Top score (Mario style)
+    top_score_x = left_padding + 130  # A bit to the right of player score
+    
+    # Top score text
+    top_score_name = "TOP"
+    top_score_text = score_font.render(top_score_name, True, ui_white)
+    screen.blit(top_score_text, [top_score_x, top_padding])
+    
+    # Top score value with leading zeros
+    top_score_value_text = f"{high_score:06d}"
+    top_score_value = score_font.render(top_score_value_text, True, ui_white)
+    screen.blit(top_score_value, [top_score_x, top_padding + 25])  # Below "TOP"
 
 
 def draw_snake(snake_block_size, snake_list, is_hunter=False):
@@ -401,7 +436,7 @@ def gameLoop():
             screen.fill(black)
             message = font_style.render("Paused - Press C to continue or Q to quit", True, white)
             screen.blit(message, [width / 6, height / 3])
-            show_score(score)
+            show_score(score, high_score)
             pygame.display.update()
 
             for event in pygame.event.get():
@@ -819,7 +854,7 @@ def gameLoop():
         # Draw both snakes
         draw_snake(snake_block_size, snake_list)
         draw_snake(snake_block_size, hunter_snake_list, is_hunter=True)
-        show_score(score, is_reversal)
+        show_score(score, high_score, is_reversal)
 
         pygame.display.update()
 
@@ -836,19 +871,40 @@ def gameLoop():
     textRect.center = (width / 2, height / 3)
     screen.blit(game_over_message, textRect)
     
-    # Draw score in 8-bit style box
-    score_box_color = (50, 50, 200)  # Blue box
-    score_box = pygame.Rect(width/2 - 120, height/2 - 40, 240, 80)
-    pygame.draw.rect(screen, score_box_color, score_box)
-    pygame.draw.rect(screen, white, score_box, 3)  # White border
+    # Draw Mario-style score box
+    box_width = 300
+    box_height = 140
+    box_x = width/2 - box_width/2
+    box_y = height/2 - box_height/2
     
-    # Score text
-    score_message = font_style.render("SCORE: " + str(score), True, white)
-    score_rect = score_message.get_rect(center=(width/2, height/2 - 20))
+    # Draw black background box
+    pygame.draw.rect(screen, black, [box_x, box_y, box_width, box_height])
+    pygame.draw.rect(screen, white, [box_x, box_y, box_width, box_height], 2)  # White border
+    
+    # Player score header
+    player_header = font_style.render("PLAYER", True, ui_white)
+    player_header_rect = player_header.get_rect()
+    player_header_rect.topleft = (box_x + 30, box_y + 20)
+    screen.blit(player_header, player_header_rect)
+    
+    # Player score value
+    score_text = f"{score:06d}"
+    score_message = font_style.render(score_text, True, ui_white)
+    score_rect = score_message.get_rect()
+    score_rect.topleft = (box_x + 30, box_y + 55)
     screen.blit(score_message, score_rect)
     
-    high_score_message = font_style.render("HIGH SCORE: " + str(high_score), True, white)
-    high_score_rect = high_score_message.get_rect(center=(width/2, height/2 + 20))
+    # Top score header (right side)
+    top_header = font_style.render("TOP", True, ui_white)
+    top_header_rect = top_header.get_rect()
+    top_header_rect.topleft = (box_x + 180, box_y + 20)
+    screen.blit(top_header, top_header_rect)
+    
+    # High score value
+    high_score_text = f"{high_score:06d}"
+    high_score_message = font_style.render(high_score_text, True, ui_white)
+    high_score_rect = high_score_message.get_rect()
+    high_score_rect.topleft = (box_x + 180, box_y + 55)
     screen.blit(high_score_message, high_score_rect)
     
     # Instructions at bottom
