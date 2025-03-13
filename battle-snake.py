@@ -292,7 +292,7 @@ def gameLoop():
     hunter_y_change = 0
     
     # Hunter snake AI variables
-    target_update_delay = 15  # Update target every N frames
+    target_update_delay = 20  # Update target position every N frames (balanced for responsiveness)
     target_update_counter = 0
     current_target_x = 0
     current_target_y = 0
@@ -300,7 +300,7 @@ def gameLoop():
     hunter_activated = False  # Hunter won't move until player moves
     
     # Target commitment variables
-    target_commitment_duration = 60  # Frames to stick with a target
+    target_commitment_duration = 120  # Frames to stick with a target (balanced for 50/50 hunting/growth)
     current_commitment_counter = 0
     current_target_type = "none"  # Can be "player" or "food" or "none"
 
@@ -387,8 +387,11 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Set initial target based on distance
-                        if distance_to_player < closest_food_distance:
+                        # Balanced initial targeting (50/50 food vs player)
+                        hunting_bias = random.random()  # Random value 0-1
+                        
+                        # 50% chance to target player if within reasonable range
+                        if hunting_bias > 0.5 and distance_to_player < 200:
                             current_target_type = "player"
                             current_target_x = snake_head_x
                             current_target_y = snake_head_y
@@ -411,8 +414,11 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Set initial target based on distance
-                        if distance_to_player < closest_food_distance:
+                        # Balanced initial targeting (50/50 food vs player)
+                        hunting_bias = random.random()  # Random value 0-1
+                        
+                        # 50% chance to target player if within reasonable range
+                        if hunting_bias > 0.5 and distance_to_player < 200:
                             current_target_type = "player"
                             current_target_x = snake_head_x
                             current_target_y = snake_head_y
@@ -435,8 +441,11 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Set initial target based on distance
-                        if distance_to_player < closest_food_distance:
+                        # Balanced initial targeting (50/50 food vs player)
+                        hunting_bias = random.random()  # Random value 0-1
+                        
+                        # 50% chance to target player if within reasonable range
+                        if hunting_bias > 0.5 and distance_to_player < 200:
                             current_target_type = "player"
                             current_target_x = snake_head_x
                             current_target_y = snake_head_y
@@ -459,8 +468,11 @@ def gameLoop():
                         closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                         closest_food_distance = min(distance_to_food1, distance_to_food2)
                         
-                        # Set initial target based on distance
-                        if distance_to_player < closest_food_distance:
+                        # Balanced initial targeting (50/50 food vs player)
+                        hunting_bias = random.random()  # Random value 0-1
+                        
+                        # 50% chance to target player if within reasonable range
+                        if hunting_bias > 0.5 and distance_to_player < 200:
                             current_target_type = "player"
                             current_target_x = snake_head_x
                             current_target_y = snake_head_y
@@ -519,14 +531,50 @@ def gameLoop():
                 closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                 closest_food_distance = min(distance_to_food1, distance_to_food2)
                 
-                # Only switch targets if there's a significant difference
-                # or if this is the first target selection
-                if current_target_type == "none" or abs(distance_to_player - closest_food_distance) > 50:
-                    if distance_to_player < closest_food_distance:
+                # Balanced targeting logic (50/50 growth vs hunting):
+                # Create a "targeting bias" that balances player vs food
+                hunting_bias = random.random()  # Random value 0-1 to add variation
+                
+                # Factor in hunter size - larger hunter = more aggressive
+                if hunter_score > 5:
+                    hunting_bias += 0.2  # Boost aggressiveness when bigger
+                
+                # Factor in player size - larger player = more appealing target
+                if score > 10:
+                    hunting_bias += 0.2  # Bigger player is more appealing target
+                
+                # Base comparison values with added randomness
+                player_value = distance_to_player * (0.8 + 0.4 * random.random())
+                food_value = closest_food_distance
+                
+                # Initial targeting
+                if current_target_type == "none":
+                    # 50% chance to start with player or food if both are viable
+                    if hunting_bias > 0.5 and distance_to_player < 200:
                         current_target_type = "player"
                         current_target_x = snake_head_x
                         current_target_y = snake_head_y
                     else:
+                        current_target_type = "food"
+                        current_target_x = closest_food_x
+                        current_target_y = closest_food_y
+                
+                # When re-evaluating targeting:
+                elif current_target_type == "food":
+                    # Switch to player if:
+                    # 1. Player is close, or
+                    # 2. Random chance (more aggressive hunting)
+                    if distance_to_player < 150 or (hunting_bias > 0.6 and distance_to_player < 250):
+                        current_target_type = "player"
+                        current_target_x = snake_head_x
+                        current_target_y = snake_head_y
+                
+                elif current_target_type == "player":
+                    # Switch to food if:
+                    # 1. Food is significantly closer, or
+                    # 2. Player is very far away
+                    # 3. Random chance (focus on growth)
+                    if closest_food_distance < distance_to_player * 0.7 or distance_to_player > 300 or (hunting_bias < 0.3 and closest_food_distance < 150):
                         current_target_type = "food"
                         current_target_x = closest_food_x
                         current_target_y = closest_food_y
