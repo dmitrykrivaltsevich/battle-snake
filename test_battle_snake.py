@@ -108,6 +108,90 @@ class TestHunterSnake(unittest.TestCase):
         self.assertEqual(SNAKE_BLOCK_SIZE, dx)
         self.assertEqual(0, dy)
     
+    def test_hunter_immediate_targeting(self):
+        """Test that hunter snake targets food or player immediately at game start, not (0,0)."""
+        # Setup game conditions similar to start of game
+        # Hunter starting position (similar to game's quarter-screen position)
+        hunter_head_x, hunter_head_y = SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4
+        
+        # Player position at center screen (as in game)
+        player_x, player_y = SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2
+        
+        # Food positions in other areas of screen
+        food1_x, food1_y = SCREEN_WIDTH * 3/4, SCREEN_HEIGHT * 3/4
+        food2_x, food2_y = SCREEN_WIDTH * 3/4, SCREEN_HEIGHT / 4
+        
+        # Initial snake body
+        hunter_body = [[hunter_head_x - SNAKE_BLOCK_SIZE, hunter_head_y], [hunter_head_x, hunter_head_y]]
+        
+        # No initial direction
+        current_direction = {"dx": 0, "dy": 0}
+        
+        # Empty obstacles for simplicity
+        obstacles = []
+        
+        # Get direction with default target (would be 0,0 in the unpatched game)
+        # This simulates what happens immediately after hunter is activated
+        # We're not passing an explicit target but letting get_hunter_direction determine it
+        # If the bug exists, the hunter would try to go to (0,0)
+        dx, dy = get_hunter_direction(
+            hunter_head_x, hunter_head_y,
+            0, 0,  # Using (0,0) as the current_target in initial game state
+            obstacles, current_direction, hunter_body,
+            food_positions=[(food1_x, food1_y), (food2_x, food2_y)],
+            player_position=(player_x, player_y)
+        )
+        
+        # Calculate vector to top-left corner (0,0)
+        vector_to_top_left_x = -1 if hunter_head_x > 0 else 0
+        vector_to_top_left_y = -1 if hunter_head_y > 0 else 0
+        
+        # The fixed hunter should NOT be moving toward (0,0)
+        # It should either target the player or one of the food items
+        
+        # Check if hunter is NOT moving toward (0,0)
+        moving_to_top_left = (dx * vector_to_top_left_x > 0 and dy * vector_to_top_left_y > 0)
+        
+        # Hunter should be targeting either player or food, not (0,0)
+        self.assertFalse(moving_to_top_left, 
+                         "Hunter snake should not initially target (0,0)")
+        
+        # Additional check to verify it IS targeting either player or food
+        # Calculate vectors to potential targets
+        vector_to_player = (
+            player_x - hunter_head_x, 
+            player_y - hunter_head_y
+        )
+        
+        vector_to_food1 = (
+            food1_x - hunter_head_x,
+            food1_y - hunter_head_y
+        )
+        
+        vector_to_food2 = (
+            food2_x - hunter_head_x,
+            food2_y - hunter_head_y
+        )
+        
+        # Check if hunter is moving in the general direction of any valid target
+        # (comparing signs of vectors)
+        moving_to_player = (dx * vector_to_player[0] > 0 and dy * vector_to_player[1] > 0) or \
+                           (dx != 0 and vector_to_player[0] != 0 and dx / abs(dx) == vector_to_player[0] / abs(vector_to_player[0])) or \
+                           (dy != 0 and vector_to_player[1] != 0 and dy / abs(dy) == vector_to_player[1] / abs(vector_to_player[1]))
+                          
+        moving_to_food1 = (dx * vector_to_food1[0] > 0 and dy * vector_to_food1[1] > 0) or \
+                          (dx != 0 and vector_to_food1[0] != 0 and dx / abs(dx) == vector_to_food1[0] / abs(vector_to_food1[0])) or \
+                          (dy != 0 and vector_to_food1[1] != 0 and dy / abs(dy) == vector_to_food1[1] / abs(vector_to_food1[1]))
+                          
+        moving_to_food2 = (dx * vector_to_food2[0] > 0 and dy * vector_to_food2[1] > 0) or \
+                          (dx != 0 and vector_to_food2[0] != 0 and dx / abs(dx) == vector_to_food2[0] / abs(vector_to_food2[0])) or \
+                          (dy != 0 and vector_to_food2[1] != 0 and dy / abs(dy) == vector_to_food2[1] / abs(vector_to_food2[1]))
+                          
+        moving_to_valid_target = moving_to_player or moving_to_food1 or moving_to_food2
+        
+        self.assertTrue(moving_to_valid_target, 
+                        "Hunter snake should initially target player or food")
+    
     def test_obstacle_avoidance(self):
         """Test that hunter snake avoids obstacles."""
         # Setup

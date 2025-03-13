@@ -375,19 +375,99 @@ def gameLoop():
                 if key == pygame.K_LEFT:
                     x_change = -snake_block_size
                     y_change = 0
-                    hunter_activated = True  # Activate hunter when player first moves
+                    # Activate hunter when player first moves and set initial target
+                    if not hunter_activated:
+                        hunter_activated = True
+                        # Calculate distances to decide initial target
+                        distance_to_player = calculate_distance(hunter_head_x, hunter_head_y, snake_head_x, snake_head_y)
+                        distance_to_food1 = calculate_distance(hunter_head_x, hunter_head_y, food_x, food_y)
+                        distance_to_food2 = calculate_distance(hunter_head_x, hunter_head_y, food2_x, food2_y)
+                        
+                        # Get the closest food
+                        closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
+                        closest_food_distance = min(distance_to_food1, distance_to_food2)
+                        
+                        # Set initial target based on distance
+                        if distance_to_player < closest_food_distance:
+                            current_target_type = "player"
+                            current_target_x = snake_head_x
+                            current_target_y = snake_head_y
+                        else:
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_RIGHT:
                     x_change = snake_block_size
                     y_change = 0
-                    hunter_activated = True  # Activate hunter when player first moves
+                    # Activate hunter when player first moves and set initial target
+                    if not hunter_activated:
+                        hunter_activated = True
+                        # Calculate distances to decide initial target
+                        distance_to_player = calculate_distance(hunter_head_x, hunter_head_y, snake_head_x, snake_head_y)
+                        distance_to_food1 = calculate_distance(hunter_head_x, hunter_head_y, food_x, food_y)
+                        distance_to_food2 = calculate_distance(hunter_head_x, hunter_head_y, food2_x, food2_y)
+                        
+                        # Get the closest food
+                        closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
+                        closest_food_distance = min(distance_to_food1, distance_to_food2)
+                        
+                        # Set initial target based on distance
+                        if distance_to_player < closest_food_distance:
+                            current_target_type = "player"
+                            current_target_x = snake_head_x
+                            current_target_y = snake_head_y
+                        else:
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_UP:
                     y_change = -snake_block_size
                     x_change = 0
-                    hunter_activated = True  # Activate hunter when player first moves
+                    # Activate hunter when player first moves and set initial target
+                    if not hunter_activated:
+                        hunter_activated = True
+                        # Calculate distances to decide initial target
+                        distance_to_player = calculate_distance(hunter_head_x, hunter_head_y, snake_head_x, snake_head_y)
+                        distance_to_food1 = calculate_distance(hunter_head_x, hunter_head_y, food_x, food_y)
+                        distance_to_food2 = calculate_distance(hunter_head_x, hunter_head_y, food2_x, food2_y)
+                        
+                        # Get the closest food
+                        closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
+                        closest_food_distance = min(distance_to_food1, distance_to_food2)
+                        
+                        # Set initial target based on distance
+                        if distance_to_player < closest_food_distance:
+                            current_target_type = "player"
+                            current_target_x = snake_head_x
+                            current_target_y = snake_head_y
+                        else:
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_DOWN:
                     y_change = snake_block_size
                     x_change = 0
-                    hunter_activated = True  # Activate hunter when player first moves
+                    # Activate hunter when player first moves and set initial target
+                    if not hunter_activated:
+                        hunter_activated = True
+                        # Calculate distances to decide initial target
+                        distance_to_player = calculate_distance(hunter_head_x, hunter_head_y, snake_head_x, snake_head_y)
+                        distance_to_food1 = calculate_distance(hunter_head_x, hunter_head_y, food_x, food_y)
+                        distance_to_food2 = calculate_distance(hunter_head_x, hunter_head_y, food2_x, food2_y)
+                        
+                        # Get the closest food
+                        closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
+                        closest_food_distance = min(distance_to_food1, distance_to_food2)
+                        
+                        # Set initial target based on distance
+                        if distance_to_player < closest_food_distance:
+                            current_target_type = "player"
+                            current_target_x = snake_head_x
+                            current_target_y = snake_head_y
+                        else:
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_SPACE:
                     game_paused = True
                 elif key == pygame.K_c:  # C key to continue game
@@ -478,7 +558,9 @@ def gameLoop():
                 hunter_head_x, hunter_head_y, 
                 current_target_x, current_target_y, 
                 obstacles, current_direction,
-                hunter_snake_list
+                hunter_snake_list,
+                food_positions=[(food_x, food_y), (food2_x, food2_y)],
+                player_position=(snake_head_x, snake_head_y)
             )
             
             # Move hunter snake

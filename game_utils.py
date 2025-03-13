@@ -21,8 +21,22 @@ def is_collision_with_obstacles(x, y, obstacles, block_size=SNAKE_BLOCK_SIZE):
             return True
     return False
 
-def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_direction, snake_body, block_size=SNAKE_BLOCK_SIZE, width=SCREEN_WIDTH, height=SCREEN_HEIGHT):
-    """Find the best direction for the hunter snake to move to reach a target while avoiding obstacles."""
+def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_direction, snake_body, 
+                    block_size=SNAKE_BLOCK_SIZE, width=SCREEN_WIDTH, height=SCREEN_HEIGHT,
+                    food_positions=None, player_position=None):
+    """Find the best direction for the hunter snake to move to reach a target while avoiding obstacles.
+    
+    Args:
+        head_x, head_y: Current hunter head position
+        target_x, target_y: Target position to move toward
+        obstacles: List of obstacles to avoid
+        current_direction: Current movement direction
+        snake_body: List of hunter snake body segments
+        block_size: Size of snake blocks
+        width, height: Screen dimensions
+        food_positions: Optional list of food positions [(x1, y1), (x2, y2), ...] 
+        player_position: Optional player position (x, y)
+    """
     # Possible directions
     directions = [
         {"dx": -block_size, "dy": 0, "name": "LEFT"},
@@ -34,6 +48,34 @@ def get_hunter_direction(head_x, head_y, target_x, target_y, obstacles, current_
     # Initialize bias for each direction
     for direction in directions:
         direction["bias"] = 0
+    
+    # CRITICAL FIX: Check if target is (0,0) which means we need to choose a target
+    # This happens when the hunter is first activated and no target has been chosen yet
+    target_not_set = (target_x == 0 and target_y == 0)
+    
+    if target_not_set and (food_positions or player_position):
+        # We need to choose a target immediately instead of going to (0,0)
+        candidates = []
+        
+        # Add food positions as potential targets
+        if food_positions:
+            for food_x, food_y in food_positions:
+                distance = calculate_distance(head_x, head_y, food_x, food_y)
+                candidates.append({"x": food_x, "y": food_y, "distance": distance, "type": "food"})
+        
+        # Add player position as potential target
+        if player_position:
+            player_x, player_y = player_position
+            distance = calculate_distance(head_x, head_y, player_x, player_y)
+            candidates.append({"x": player_x, "y": player_y, "distance": distance, "type": "player"})
+        
+        # Sort candidates by distance (closest first)
+        candidates.sort(key=lambda c: c["distance"])
+        
+        # Use closest target
+        if candidates:
+            closest = candidates[0]
+            target_x, target_y = closest["x"], closest["y"]
     
     # Track previous positions to detect cycling
     previous_positions = []
