@@ -22,7 +22,7 @@ def is_collision_with_obstacles(x, y, obstacles, block_size=SNAKE_BLOCK_SIZE):
     return False
 
 def is_player_visible(hunter_x, hunter_y, player_x, player_y, obstacles, current_direction=None, 
-                      block_size=SNAKE_BLOCK_SIZE, max_view_distance=250):
+                      block_size=SNAKE_BLOCK_SIZE, max_view_distance=300):
     """
     Determine if the player is visible to the hunter (line of sight not blocked by obstacles).
     
@@ -32,7 +32,7 @@ def is_player_visible(hunter_x, hunter_y, player_x, player_y, obstacles, current
         obstacles: List of obstacles (x, y, width, height)
         current_direction: Current hunter direction (for field of view calculation)
         block_size: Size of snake blocks
-        max_view_distance: Maximum distance the hunter can "see"
+        max_view_distance: Maximum distance the hunter can "see" (increased from 250 to 300)
         
     Returns:
         Boolean indicating if player is visible
@@ -66,8 +66,9 @@ def is_player_visible(hunter_x, hunter_y, player_x, player_y, obstacles, current
         dot_product = norm_dx * norm_player_dx + norm_dy * norm_player_dy
         
         # If player is behind hunter (dot product < 0), treat as not visible
-        # Allow 120 degree field of view (cos(120°/2) = -0.5)
-        if dot_product < -0.5:
+        # Allow 150 degree field of view (cos(150°/2) = -0.86) - was 120 degrees
+        # This gives the hunter better peripheral vision
+        if dot_product < -0.86:
             return False
     
     # Check if line of sight is blocked by any obstacle

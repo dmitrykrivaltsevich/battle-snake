@@ -300,9 +300,12 @@ def gameLoop():
     hunter_activated = False  # Hunter won't move until player moves
     
     # Target commitment variables
-    target_commitment_duration = 60  # Frames to stick with a target (balanced for 50/50 hunting/growth)
+    target_commitment_duration = 45  # Frames to stick with a target (reduced to be more responsive)
     current_commitment_counter = 0
     current_target_type = "none"  # Can be "player" or "food" or "none"
+    
+    # Variables for tracking player attractiveness
+    player_is_attractive = False  # Used to make hunter more interested in longer player snakes
 
     # Generate obstacles first
     obstacles = generate_obstacles()
@@ -394,25 +397,39 @@ def gameLoop():
                             obstacles
                         )
                         
-                        # Calculate if food is close enough to be an immediate opportunity
-                        food_opportunity = closest_food_distance < 80
+                        # Hunter should prefer hunting player
+                        # Base aggression is lower, but increases with player length
+                        hunting_aggression = 0.55
                         
-                        # Base targeting on visibility
-                        if not player_visible:
-                            # Player not visible, target food
-                            current_target_type = "food"
-                            current_target_x = closest_food_x
-                            current_target_y = closest_food_y
-                        else:
-                            # Player is visible - target player unless food is very close
-                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                        # Make longer player snakes more attractive targets
+                        player_length_bonus = min(0.4, (score - 1) * 0.05)  # Cap at 0.4
+                        hunting_aggression += player_length_bonus
+                        
+                        # Only consider food "attractive" if it's VERY close
+                        food_opportunity = closest_food_distance < 60
+                        
+                        # Adjust distance to player based on length (longer snakes seem "closer")
+                        player_length_factor = max(0.6, 1.0 - (score - 1) * 0.04)
+                        effective_distance_to_player = distance_to_player * player_length_factor
+                        
+                        # Enhanced targeting logic - more likely to hunt player
+                        if player_visible or random.random() < hunting_aggression:
+                            # Player is visible or hunter feels aggressive, hunt player
+                            # Only grab food if it's extremely close and player is far
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.3:
                                 current_target_type = "food"
                                 current_target_x = closest_food_x
                                 current_target_y = closest_food_y
                             else:
+                                # Hunt player (default choice in most cases)
                                 current_target_type = "player"
                                 current_target_x = snake_head_x
                                 current_target_y = snake_head_y
+                        else:
+                            # Player not visible and hunter not feeling aggressive
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_RIGHT:
                     x_change = snake_block_size
                     y_change = 0
@@ -435,25 +452,30 @@ def gameLoop():
                             obstacles
                         )
                         
-                        # Calculate if food is close enough to be an immediate opportunity
-                        food_opportunity = closest_food_distance < 80
+                        # Hunter should prefer hunting player
+                        hunting_aggression = 0.7
                         
-                        # Base targeting on visibility
-                        if not player_visible:
-                            # Player not visible, target food
-                            current_target_type = "food"
-                            current_target_x = closest_food_x
-                            current_target_y = closest_food_y
-                        else:
-                            # Player is visible - target player unless food is very close
-                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                        # Only consider food "attractive" if it's VERY close
+                        food_opportunity = closest_food_distance < 60
+                        
+                        # Enhanced targeting logic - more likely to hunt player
+                        if player_visible or random.random() < hunting_aggression:
+                            # Player is visible or hunter feels aggressive, hunt player
+                            # Only grab food if it's extremely close and player is far
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.3:
                                 current_target_type = "food"
                                 current_target_x = closest_food_x
                                 current_target_y = closest_food_y
                             else:
+                                # Hunt player (default choice in most cases)
                                 current_target_type = "player"
                                 current_target_x = snake_head_x
                                 current_target_y = snake_head_y
+                        else:
+                            # Player not visible and hunter not feeling aggressive
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_UP:
                     y_change = -snake_block_size
                     x_change = 0
@@ -476,25 +498,30 @@ def gameLoop():
                             obstacles
                         )
                         
-                        # Calculate if food is close enough to be an immediate opportunity
-                        food_opportunity = closest_food_distance < 80
+                        # Hunter should prefer hunting player
+                        hunting_aggression = 0.6
                         
-                        # Base targeting on visibility
-                        if not player_visible:
-                            # Player not visible, target food
-                            current_target_type = "food"
-                            current_target_x = closest_food_x
-                            current_target_y = closest_food_y
-                        else:
-                            # Player is visible - target player unless food is very close
-                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                        # Only consider food "attractive" if it's VERY close
+                        food_opportunity = closest_food_distance < 70
+                        
+                        # Enhanced targeting logic - more likely to hunt player
+                        if player_visible or random.random() < hunting_aggression:
+                            # Player is visible or hunter feels aggressive, hunt player
+                            # Only grab food if it's extremely close and player is far
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.4:
                                 current_target_type = "food"
                                 current_target_x = closest_food_x
                                 current_target_y = closest_food_y
                             else:
+                                # Hunt player (default choice in most cases)
                                 current_target_type = "player"
                                 current_target_x = snake_head_x
                                 current_target_y = snake_head_y
+                        else:
+                            # Player not visible and hunter not feeling aggressive
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_DOWN:
                     y_change = snake_block_size
                     x_change = 0
@@ -517,25 +544,30 @@ def gameLoop():
                             obstacles
                         )
                         
-                        # Calculate if food is close enough to be an immediate opportunity
-                        food_opportunity = closest_food_distance < 80
+                        # Hunter should prefer hunting player
+                        hunting_aggression = 0.7
                         
-                        # Base targeting on visibility
-                        if not player_visible:
-                            # Player not visible, target food
-                            current_target_type = "food"
-                            current_target_x = closest_food_x
-                            current_target_y = closest_food_y
-                        else:
-                            # Player is visible - target player unless food is very close
-                            if food_opportunity and closest_food_distance < distance_to_player * 0.5:
+                        # Only consider food "attractive" if it's VERY close
+                        food_opportunity = closest_food_distance < 60
+                        
+                        # Enhanced targeting logic - more likely to hunt player
+                        if player_visible or random.random() < hunting_aggression:
+                            # Player is visible or hunter feels aggressive, hunt player
+                            # Only grab food if it's extremely close and player is far
+                            if food_opportunity and closest_food_distance < distance_to_player * 0.3:
                                 current_target_type = "food"
                                 current_target_x = closest_food_x
                                 current_target_y = closest_food_y
                             else:
+                                # Hunt player (default choice in most cases)
                                 current_target_type = "player"
                                 current_target_x = snake_head_x
                                 current_target_y = snake_head_y
+                        else:
+                            # Player not visible and hunter not feeling aggressive
+                            current_target_type = "food"
+                            current_target_x = closest_food_x
+                            current_target_y = closest_food_y
                 elif key == pygame.K_SPACE:
                     game_paused = True
                 elif key == pygame.K_c:  # C key to continue game
@@ -587,7 +619,12 @@ def gameLoop():
                 closest_food_x, closest_food_y = (food_x, food_y) if distance_to_food1 < distance_to_food2 else (food2_x, food2_y)
                 closest_food_distance = min(distance_to_food1, distance_to_food2)
                 
-                # Line-of-sight and visibility-based targeting logic
+                # Adjust the perceived distance to player based on player's snake length
+                # This makes longer player snakes "seem" closer to the hunter, making them more attractive targets
+                player_length_factor = max(0.6, 1.0 - (score - 1) * 0.04)  # Min factor is 0.6 (reached at length 11)
+                effective_distance_to_player = distance_to_player * player_length_factor
+                
+                # Enhanced line-of-sight and player-hunting focused targeting logic
                 # Check if the player is visible to the hunter
                 player_visible = is_player_visible(
                     hunter_head_x, hunter_head_y,
@@ -596,47 +633,64 @@ def gameLoop():
                     current_direction={"dx": hunter_x_change, "dy": hunter_y_change}
                 )
                 
-                # Calculate how attractive food is based on distance
-                food_opportunity = closest_food_distance < 80  # Food is very close by
+                # The hunter should be more aggressive based on various factors
+                hunting_aggression = 0.55  # Base aggression level (higher = more hunting, lower = more food)
+                
+                # Increase aggression based on player's snake length 
+                # The longer the player's snake, the more attractive it is to hunt
+                player_length_bonus = min(0.4, (score - 1) * 0.05)  # Cap at 0.4 (reached at length 9)
+                hunting_aggression += player_length_bonus
+                
+                # Increase aggression when hunter is larger
+                if hunter_score > 5:
+                    hunting_aggression += 0.1
+                
+                # Only consider food "attractive" if it's VERY close
+                # Reduce this threshold to make hunter more interested in player
+                food_opportunity = closest_food_distance < 60
                 
                 # Initial targeting logic when hunter has no target yet
                 if current_target_type == "none":
-                    # Default to food if player isn't visible
-                    if not player_visible:
+                    # More aggressive initial targeting
+                    # Higher chance to target player even if not visible
+                    if not player_visible and random.random() > hunting_aggression:
                         current_target_type = "food"
                         current_target_x = closest_food_x
                         current_target_y = closest_food_y
-                    # When player is visible, target player unless food is very close
                     else:
-                        if food_opportunity and closest_food_distance < distance_to_player * 0.5:
-                            # Grab the easy food first, then hunt player
+                        # Only grab food if it's extremely close and player is far
+                        if food_opportunity and closest_food_distance < effective_distance_to_player * 0.3:
                             current_target_type = "food"
                             current_target_x = closest_food_x
                             current_target_y = closest_food_y
                         else:
-                            # Player is visible and no close food - hunt player
+                            # Hunt player (even if not visible sometimes)
                             current_target_type = "player"
                             current_target_x = snake_head_x
                             current_target_y = snake_head_y
                 
                 # When already targeting food
                 elif current_target_type == "food":
-                    # Switch to player if:
-                    # 1. Player becomes visible and
-                    # 2. No immediate food opportunity and
-                    # 3. Player is within reasonable hunting distance
-                    if player_visible and not food_opportunity and distance_to_player < 200:
+                    # Switch to player more eagerly:
+                    # More aggressive switching to player - even if food is nearby
+                    # Removed the "not food_opportunity" condition to make hunter more interested in player
+                    if player_visible and effective_distance_to_player < 250:
+                        current_target_type = "player"
+                        current_target_x = snake_head_x
+                        current_target_y = snake_head_y
+                    # Random chance to switch to player even if not visible
+                    elif effective_distance_to_player < 200 and random.random() < hunting_aggression:
                         current_target_type = "player"
                         current_target_x = snake_head_x
                         current_target_y = snake_head_y
                 
                 # When already targeting player
                 elif current_target_type == "player":
-                    # Switch to food if:
-                    # 1. Player is no longer visible, or
-                    # 2. Food is very close (opportunistic grab), or
-                    # 3. Player has moved very far away
-                    if (not player_visible) or (food_opportunity and closest_food_distance < 60) or distance_to_player > 300:
+                    # More persistent in hunting - only switch to food if:
+                    # 1. Player is not visible AND food is extremely close, or
+                    # 2. Player has moved extremely far away
+                    # Longer player snakes are harder to shake off due to effective_distance_to_player
+                    if ((not player_visible) and closest_food_distance < 50) or effective_distance_to_player > 350:
                         current_target_type = "food"
                         current_target_x = closest_food_x
                         current_target_y = closest_food_y
